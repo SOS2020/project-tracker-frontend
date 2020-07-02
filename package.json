@@ -19,6 +19,7 @@
     "postcss": "^7.0.32",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
+    "react-file-picker": "0.0.6",
     "react-filepond": "^7.0.1",
     "react-multimedia-capture": "^1.2.4",
     "react-router-dom": "^5.2.0",
