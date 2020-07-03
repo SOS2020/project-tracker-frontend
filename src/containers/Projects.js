@@ -4,6 +4,7 @@ import {API, graphqlOperation} from 'aws-amplify';
 import MoreButton from "../components/MoreButton";
 import {useAuth} from "../lib/authLib";
 import Modal from "../components/Modal";
+import {FilePicker} from 'react-file-picker';
 
 export default function Projects(props) {
     const history = useHistory();
@@ -12,7 +13,6 @@ export default function Projects(props) {
     // const [isLoading, setIsLoading] = useState(true);
     const [isInit, setIsInit] = useState(false);
     const [projects, setProjects] = useState([]);
-
     async function deleteProject(e, projectID) {
         e.preventDefault();
         // setIsLoading(true);
@@ -34,7 +34,55 @@ export default function Projects(props) {
         }
 
     }
-
+    async function importProject(JSONobj)
+    {
+      let reader=new FileReader();
+      
+      reader.readAsText(JSONobj);
+      reader.onload = function() {
+        let JSONobject=JSON.parse(reader.result);
+        JSONobject.events[0].filenames.map(d => `${d},`)
+        let query=`
+        mutation {
+            createProject(input: {
+                name: "${JSONobject.name}",
+                id :"${JSONobject.projectid}",
+                archived: ${JSONobject.public},
+            }){
+               createdAt updatedAt archived
+            }
+        }
+        `;
+       API.graphql(graphqlOperation(query)).catch(e => {
+            console.log(e);
+        });
+        for(let i=0;i<JSONobject.events.length;i++)
+        {let query2=`
+        mutation {
+          createEvent(input: {
+              eventProjectId: "${JSONobject.projectid}",
+              filenames: ["${ JSONobject.events[i].filenames.map(d => `${d}`)}"],
+              note: """${JSONobject.events[i].name}""",
+              id: "${JSONobject.events[i].id}"
+              }) {
+                id
+                note
+                time
+                filenames
+                hidden
+                publicEvent{
+                    id
+                }
+               
+          }
+        }`;
+       API.graphql(graphqlOperation(query2)).catch(e => {
+                console.log(e);
+            });
+        }
+     };      
+    
+    }
 
     useEffect(() => {
         const listQuery = `
@@ -50,8 +98,7 @@ export default function Projects(props) {
 
         function loadProjects() {
             return API.graphql(graphqlOperation(listQuery));
-        }
-
+        }       
 
         async function onLoad() {
             if (auth.authState !== "signedIn"){
@@ -84,6 +131,15 @@ export default function Projects(props) {
                     <Link to="/projects/new">
                         <button className="button !normal ~neutral my-4">New Project</button>
                     </Link>
+                    <FilePicker
+    extensions={['json']}
+    onChange={FileObject => {importProject(FileObject);}}
+  >
+    <button className="button !normal ~neutral my-4" >
+      Import Project
+    </button>
+  </FilePicker>
+
                     <p className="label my-4">Active Projects</p>
                     <div className="project-container grid md:grid-cols-2 gap-2 lg:grid-cols-3 my-4">
                         {projects.map((project) => (
